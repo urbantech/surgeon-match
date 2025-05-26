@@ -164,3 +164,159 @@ Client → API Gateway → FastAPI Services ──┐
 | Security & Compliance | \[Name]           | ☐        |
 
 ---
+Below is the **Add-On** section to tack onto the end of your SurgeonMatch PRD—introducing a suite of **Stretch-Goal APIs** that unlock further commercial opportunities on CareSet’s full Medicare dataset.
+
+---
+
+## 12. Stretch-Goal APIs (Add-On)
+
+> **Extend SurgeonMatch’s core functionality with these advanced endpoints—empowering commercial developers to build next-gen healthcare apps.**
+
+### 12.1 High-Value Practice Finder
+
+**GET** `/v1/highValuePractices`
+
+* **Query Params:**
+
+  * `diagnosisCode` (ICD-10)
+  * `minCohortSize` (integer)
+  * `topN` (integer)
+* **Response:** Ranked list of practices with greatest treatment gaps
+
+  ```jsonc
+  [
+    {
+      "npi": "1234567890",
+      "hcoId": "98765",
+      "practiceName": "Bay Area GI Associates",
+      "gapPercentage": 42.5,
+      "cohortSize": 550,
+      "address": "San Francisco, CA"
+    },
+    …
+  ]
+  ```
+
+### 12.2 Part D Payer & Plan-Level Trends
+
+**GET** `/v1/partDTrends`
+
+* **Query Params:**
+
+  * `drugCode` (NDC/HCPCS)
+  * `dateFrom`/`dateTo` (YYYY-MM)
+  * `region` (state or ZIP prefix)
+* **Response:** Monthly spend & claim counts by payer and plan
+
+  ```jsonc
+  [
+    {
+      "month": "2025-01",
+      "plan": "Plan D123",
+      "payer": "UnitedHealthcare",
+      "totalSpend": 1250000.00,
+      "claimCount": 4500,
+      "avgCost": 277.78
+    },
+    …
+  ]
+  ```
+
+### 12.3 Referral Network Graph
+
+**GET** `/v1/referralGraph`
+
+* **Query Params:**
+
+  * `npi` (anchor provider)
+  * `depth` (levels of referrals)
+  * `minSharedPatients` (integer)
+* **Response:** Nodes and edges for provider-to-provider referral graph
+
+  ```jsonc
+  {
+    "nodes": [
+      { "npi": "1111111111", "name": "Dr. A" },
+      …
+    ],
+    "edges": [
+      { "from": "1111111111", "to": "2222222222", "sharedPatients": 120 },
+      …
+    ]
+  }
+  ```
+
+### 12.4 Patient Adherence & Refill Metrics
+
+**GET** `/v1/adherence`
+
+* **Query Params:**
+
+  * `npi` or `hcoId`
+  * `drugCode`
+  * `period` (e.g., last 6 months)
+* **Response:** Adherence stats (PDC, refill gaps, non-adherent %)
+
+  ```jsonc
+  {
+    "provider": "1234567890",
+    "drugCode": "00071-0150-01",
+    "pdc": 0.82,
+    "avgRefillGapDays": 12.4,
+    "nonAdherentPct": 18.5
+  }
+  ```
+
+### 12.5 Cohort Segmentation Service
+
+**POST** `/v1/cohortSegments`
+
+* **Body:**
+
+  ```jsonc
+  { 
+    "diagnosisCode": "E11.9",
+    "features": ["ageGroup","comorbidityCount","geography","treatmentLine"],
+    "segmentCount": 4
+  }
+  ```
+* **Response:**
+
+  ```jsonc
+  [
+    { "segmentId": 1, "criteria": {"ageGroup":"65–74","comorbidityCount":">=2"}, "size": 12000 },
+    …
+  ]
+  ```
+
+### 12.6 Cost-of-Care & Out-of-Pocket Tracker
+
+**GET** `/v1/costOfCare`
+
+* **Query Params:**
+
+  * `drugCode`
+  * `region`
+* **Response:**
+
+  ```jsonc
+  {
+    "region": "94103",
+    "totalCost": 950000.00,
+    "avgPatientOOP": 82.50,
+    "patientSharePct": 14.8
+  }
+  ```
+
+---
+
+**These stretch-goal APIs** enable CareSet to:
+
+* Guide pharma to untapped practices via **gap analysis**
+* Monitor **Part D** formulary & spend trends in real time
+* Visualize **referral networks** for provider collaboration insights
+* Power **patient adherence** & cost-forecasting tools
+* Automate **cohort segmentation** for targeted analytics
+* Forecast **financial burden** for patients
+
+Integrate any subset of these endpoints in a later sprint to offer richer, commercial-grade developer experiences on top of CareSet’s census-level claims data.
