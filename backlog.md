@@ -190,8 +190,188 @@ Surface readmission, complication, and LOS metrics.
    * **So that** I can verify end-to-end functionality
 
 ---
+Here’s an **Add-On Backlog** of Epics and User Stories covering the Stretch-Goal APIs. You can slot these into your main backlog to plan a follow-up sprint.
 
-## Epic 8: Deployment & Monitoring
+---
+
+## Epic 9: High-Value Practice Finder
+
+Identify provider practices with the greatest treatment gaps for precision outreach.
+
+* **User Story 9.1: High-Value Practices Endpoint**
+
+  * **As** a pharma marketer
+  * **I want** `GET /v1/highValuePractices?diagnosisCode=&minCohortSize=&topN=`
+  * **So that** I can retrieve the top practices with the largest unmet need
+  * **Acceptance Criteria:**
+
+    * Returns array of `{ npi, hcoId, practiceName, gapPercentage, cohortSize, address }`
+    * Supports pagination (`limit`/`offset`)
+
+* **User Story 9.2: Gap Calculation Job**
+
+  * **As** a data engineer
+  * **I want** a daily batch job that computes `gapPercentage = 1 – (treatedCount/cohortSize)`
+  * **So that** the API can serve pre-computed values quickly
+  * **Acceptance Criteria:**
+
+    * Job writes to `high_value_practices` table
+    * Completes within nightly maintenance window
+
+---
+
+## Epic 10: Part D Payer & Plan-Level Trends
+
+Power dashboards tracking drug spend and claim counts by plan.
+
+* **User Story 10.1: Part D Trends Endpoint**
+
+  * **As** a data analyst
+  * **I want** `GET /v1/partDTrends?drugCode=&dateFrom=&dateTo=&region=`
+  * **So that** I can chart Part D spend & claims over time by payer/plan
+  * **Acceptance Criteria:**
+
+    * Returns array of `{ month, plan, payer, totalSpend, claimCount, avgCost }`
+    * Supports filtering by date range and region
+
+* **User Story 10.2: Trends Aggregation Pipeline**
+
+  * **As** a backend engineer
+  * **I want** a scheduled ETL that aggregates monthly Part D metrics into `part_d_trends`
+  * **So that** the endpoint can return queried data in <200ms
+  * **Acceptance Criteria:**
+
+    * ETL runs monthly, writing to `part_d_trends` table
+    * Logs success/failure and alert on errors
+
+---
+
+## Epic 11: Referral Network Graph
+
+Expose provider referral relationships for network visualizations.
+
+* **User Story 11.1: Referral Graph Endpoint**
+
+  * **As** a developer
+  * **I want** `GET /v1/referralGraph?npi=&depth=&minSharedPatients=`
+  * **So that** I can render a network graph of provider referrals
+  * **Acceptance Criteria:**
+
+    * Returns `{ nodes: […], edges: […] }` with correct weights
+    * Limits depth to prevent combinatorial explosion
+
+* **User Story 11.2: DocGraph Materialization**
+
+  * **As** a data engineer
+  * **I want** to materialize the DocGraph PUF into a `docgraph_edges` table
+  * **So that** the API can query edges efficiently
+  * **Acceptance Criteria:**
+
+    * Table is kept in sync via daily refresh
+    * Indexed on `(from_npi,to_npi)`
+
+---
+
+## Epic 12: Patient Adherence & Refill Metrics
+
+Surface adherence statistics to drive patient-engagement tools.
+
+* **User Story 12.1: Adherence Endpoint**
+
+  * **As** a care coordinator
+  * **I want** `GET /v1/adherence?npi=&drugCode=&period=`
+  * **So that** I can retrieve PDC, refill gaps, and non-adherent percentages
+  * **Acceptance Criteria:**
+
+    * Returns `{ provider, drugCode, pdc, avgRefillGapDays, nonAdherentPct }`
+    * Validates `period` format and returns `400` on error
+
+* **User Story 12.2: Adherence Metrics ETL**
+
+  * **As** a data engineer
+  * **I want** a windowed calculation job that computes adherence metrics for `adherence_metrics`
+  * **So that** our API returns pre-computed stats
+  * **Acceptance Criteria:**
+
+    * Job processes rolling windows (e.g., last 6 months)
+    * Stores results with `calculated_at` timestamps
+
+---
+
+## Epic 13: Cohort Segmentation Service
+
+Enable dynamic patient segmentation for advanced analytics.
+
+* **User Story 13.1: Cohort Segmentation Endpoint**
+
+  * **As** a data scientist
+  * **I want** `POST /v1/cohortSegments` with features & segmentCount
+  * **So that** I can receive algorithmically derived patient segments
+  * **Acceptance Criteria:**
+
+    * Returns array of `{ segmentId, criteria, size }`
+    * Leverages simple k-means or decision trees
+
+* **User Story 13.2: Segmentation Compute Job**
+
+  * **As** a data engineer
+  * **I want** to run the clustering algorithm on demand or schedule
+  * **So that** segments can be generated for new diagnosis codes
+  * **Acceptance Criteria:**
+
+    * Job writes to `cohort_segments` table
+    * Accepts arbitrary feature sets
+
+---
+
+## Epic 14: Cost-of-Care & Out-of-Pocket Tracker
+
+Forecast financial burden for patients at the region level.
+
+* **User Story 14.1: Cost-of-Care Endpoint**
+
+  * **As** a patient support app developer
+  * **I want** `GET /v1/costOfCare?drugCode=&region=`
+  * **So that** I can show total vs. patient OOP costs
+  * **Acceptance Criteria:**
+
+    * Returns `{ region, totalCost, avgPatientOOP, patientSharePct }`
+    * Validates region format (ZIP or state code)
+
+* **User Story 14.2: Cost Aggregation Job**
+
+  * **As** a data engineer
+  * **I want** to aggregate cost data into `cost_of_care` daily/monthly
+  * **So that** the API can return fresh numbers
+  * **Acceptance Criteria:**
+
+    * Job logs run times and errors
+    * Updates `updated_at` field
+
+---
+
+## Epic 15: Documentation & Examples for Stretch APIs
+
+* **User Story 15.1: OpenAPI Spec Extensions**
+
+  * **As** a developer
+  * **I want** the stretch endpoints added to Swagger UI
+  * **So that** I can explore and test them interactively
+* **User Story 15.2: SDK Snippets**
+
+  * **As** a third-party dev
+  * **I want** code examples for each stretch endpoint
+  * **So that** I can onboard quickly
+* **User Story 15.3: Postman Collection**
+
+  * **As** a QA engineer
+  * **I want** these new endpoints in our Postman collection
+
+---
+
+Slot these new Epics into your roadmap for subsequent sprints—each Epic can be addressed independently or in parallel to rapidly expand CareSet’s API platform.
+
+## Epic 16: Deployment & Monitoring
 
 1. **User Story 8.1: CI/CD Pipeline**
 
