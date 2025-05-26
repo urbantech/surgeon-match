@@ -1,107 +1,264 @@
-````markdown
 # SurgeonMatch API Suite
 
-> A set of RESTful endpoints exposing CareSet’s census-level Medicare claims data—designed for rapid integration into healthcare applications.
+> A high-performance API for matching Medicare patients with available surgeons based on specialty, location, and availability.
+
+[![CI/CD](https://github.com/urbantech/surgeon-match/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/urbantech/surgeon-match/actions/workflows/ci-cd.yml)
 
 ---
 
 ## 🚀 Quick Start
 
-1. **Clone the Repo**  
-   ```bash
-   git clone https://github.com/careset/surgeon-match-api.git
-   cd surgeon-match-api
-````
+### Using Docker (Recommended)
 
-2. **Create a Virtual Environment & Install**
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/urbantech/surgeon-match.git
+   cd surgeon-match
+   ```
+
+2. **Run with Docker Compose**
 
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   docker-compose up -d
+   ```
+
+   This will start three containers:
+   - PostgreSQL database
+   - Redis for caching and rate limiting
+   - SurgeonMatch API server
+
+3. **Access the API**
+
+   The API will be available at http://localhost:8888
+   
+   Swagger UI documentation: http://localhost:8888/docs
+   
+   ReDoc alternative documentation: http://localhost:8888/redoc
+
+### Manual Setup (Alternative)
+
+1. **Create a Virtual Environment & Install Dependencies**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. **Set Environment Variables**
+2. **Set Environment Variables**
 
+   Create a `.env` file in the project root or export variables directly:
    ```bash
-   export DATABASE_URL="postgres://user:pass@hostname:5432/careset"
-   export REDIS_URL="redis://localhost:6379/0"
-   export API_KEY="YOUR_API_KEY_HERE"
+   DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/surgeonmatch
+   REDIS_URL=redis://localhost:6379/0
+   DEBUG=true
+   API_KEY_HEADER=X-API-Key
+   API_PREFIX=/api/v1
+   SECRET_KEY=your-super-secret-key-change-in-production
+   RATE_LIMIT=100
+   RATE_LIMIT_PERIOD=60
    ```
 
-4. **Run Migrations & Seed Data**
+3. **Run Database Migrations**
 
    ```bash
    alembic upgrade head
-   python scripts/seed_surveys.py
+   ```
+
+4. **Create Initial API Key**
+
+   ```bash
+   python scripts/create_initial_api_key.py
    ```
 
 5. **Start the Server**
 
    ```bash
-   uvicorn app.main:app --reload
+   uvicorn surgeonmatch.main:app --host 0.0.0.0 --port 8888 --reload
    ```
 
-6. **Visit Docs**
-   Open your browser to `http://localhost:8000/docs` for interactive Swagger UI.
-
 ---
 
-## 📚 Core Endpoints
+## 📚 API Documentation
 
-### 1. Surgeon Directory
+### Authentication
 
-`GET /v1/surgeons`
+All API requests require authentication using an API key in the header:
 
-**Query Params:**
-
-* `specialtyCode` (string)
-* `lat`, `lng`, `radiusMiles` (floats)
-* `minClaimVolume` (int)
-* `acceptsMedicare` (bool)
-
-**Response:**
-
-```json
-[
-  {
-    "npi": "1234567890",
-    "name": "Dr. Jane Smith, MD",
-    "specialty_code": "47.091",
-    "latitude": 37.7749,
-    "longitude": -122.4194,
-    "claim_volume_6mo": 24,
-    "quality_score": 4.7
-  },
-  …
-]
+```
+X-API-Key: your-api-key
 ```
 
----
+### Rate Limiting
 
-### 2. Patient Journey
+The API is rate-limited to protect against abuse. Default limits are:
+- 100 requests per minute per API key
 
-`GET /v1/patientJourneys`
+### Core Endpoints
 
-**Query Params:**
+#### Surgeons API
 
-* `diagnosisCode` (string)
-* `cohortSize` (int)
+- `GET /api/v1/surgeons` - List all surgeons with pagination and filtering
+- `GET /api/v1/surgeons/{id}` - Get surgeon details by ID
+- `GET /api/v1/surgeons/npi/{npi}` - Get surgeon details by NPI number
+- `GET /api/v1/surgeons/search` - Search surgeons by name, specialty, or location
 
-**Response:**
+#### Claims API
+
+- `GET /api/v1/claims` - List all claims with pagination and filtering
+- `GET /api/v1/claims/{id}` - Get claim details by ID
+- `GET /api/v1/claims/surgeon/{surgeon_id}` - Get claims for a specific surgeon
+
+#### Quality Metrics API
+
+- `GET /api/v1/quality-metrics` - List all quality metrics with pagination and filtering
+- `GET /api/v1/quality-metrics/{id}` - Get quality metric details by ID
+- `GET /api/v1/quality-metrics/surgeon/{surgeon_id}` - Get quality metrics for a specific surgeon
+
+#### API Keys
+
+- `GET /api/v1/api-keys` - List all API keys (admin only)
+- `POST /api/v1/api-keys` - Create a new API key (admin only)
+- `DELETE /api/v1/api-keys/{id}` - Delete an API key (admin only)
+
+### Response Format
+
+All API responses are in JSON format and follow this structure:
 
 ```json
 {
-  "diagnosis_code": "K35.80",
-  "cohort_size": 5000,
-  "avg_time_to_surgery": 2.3,
-  "therapy_sequence": [
-    { "step": "ER Admission", "percent": 100 },
-    { "step": "Imaging",     "percent": 95  },
-    { "step": "Surgery",     "percent": 88  }
-  ]
+  "data": { ... },  // Requested data or array of items
+  "meta": {         // Metadata about the request/response
+    "page": 1,
+    "per_page": 20,
+    "total": 100
+  }
 }
 ```
+
+### Error Handling
+
+Errors follow this format:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": { ... }  // Optional additional error details
+  }
+}
+```
+
+## 🧪 Testing
+
+SurgeonMatch has several test scripts to validate functionality:
+
+```bash
+# Run HTTP-based API tests
+python scripts/test_api_http.py
+
+# Run curl-based API tests
+./scripts/test_api_curl.sh
+
+# Run validation against database
+python scripts/final_validation.py
+```
+
+## 🔧 Development Guidelines
+
+### Code Style
+
+- Python code follows PEP 8 with Black formatter (line length: 100 characters)
+- Use type hints for all function parameters and return values
+- Use docstrings for all public functions, classes, and modules
+- SQL keywords should be in UPPERCASE
+
+### Git Workflow
+
+- Branch naming convention:
+  - `feature/{issue-id}-short-description` for new features
+  - `bugfix/{issue-id}-short-description` for bug fixes
+  - `hotfix/{issue-id}-short-description` for critical production fixes
+
+- Create WIP commits for incremental progress
+- All PRs must have descriptive titles and detailed descriptions
+- Squash commits when merging to main
+
+### Testing
+
+- Write tests for all new features and bug fixes
+- Aim for 80%+ test coverage
+- Use pytest for unit and integration tests
+- Mock external services in unit tests
+- Reset test data after each test
+
+### Database
+
+- All schema changes must be made through Alembic migrations
+- Include both `upgrade` and `downgrade` paths in migrations
+- Test migrations on staging before production
+- Use SQLAlchemy's ORM for simple queries
+- Use raw SQL for complex analytics
+- Add appropriate indexes for frequently queried columns
+
+### API Design
+
+- Follow RESTful principles
+- Use kebab-case for URLs
+- Use camelCase for JSON properties
+- Version all APIs (e.g., `/api/v1/endpoint`)
+- Document all endpoints with OpenAPI
+
+### Performance
+
+- P99 latency < 500ms
+- Median latency < 200ms
+- Maximum response time: 2s
+- Cache responses for 1 hour by default
+- Use Redis for caching
+- Invalidate cache on data updates
+
+---
+
+## 🛡️ Security Guidelines
+
+### Authentication
+
+- Use API keys for service-to-service communication
+- Rotate API keys quarterly
+- Never commit API keys to version control
+- Store keys securely in the database with appropriate hashing
+
+### Data Protection
+
+- Encrypt sensitive data at rest
+- Use HTTPS for all communications
+- Implement rate limiting (default: 100 requests/minute per API key)
+- Log all access to sensitive data
+
+### HIPAA Compliance
+
+- Maintain audit logs for all data access
+- Implement access controls based on need-to-know principles
+- Store only minimal required PHI
+- Regular security audits and vulnerability scanning
+
+## 🔥 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 👮 License
+
+This project is licensed under the terms of the MIT license. See the LICENSE file for details.
+
+---
+
+Built with ❤️ by the SurgeonMatch team
 
 ---
 
