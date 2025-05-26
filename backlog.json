@@ -95,3 +95,83 @@
     "labels": ["Epic: Deployment & Monitoring", "monitoring"]
   }
 ]
+
+
+[
+  {
+    "title": "High-Value Practices Endpoint",
+    "body": "**As** a pharma marketer\n**I want** `GET /v1/highValuePractices?diagnosisCode=&minCohortSize=&topN=`\n**So that** I can retrieve the top practices with the largest unmet need\n\n**Acceptance Criteria:**\n- Returns array of `{ npi, hcoId, practiceName, gapPercentage, cohortSize, address }`\n- Supports pagination (`limit`/`offset`)",
+    "labels": ["Epic: High-Value Practice Finder", "backend", "api"]
+  },
+  {
+    "title": "Gap Calculation Job",
+    "body": "**As** a data engineer\n**I want** a daily batch job that computes `gapPercentage = 1 – (treatedCount/cohortSize)`\n**So that** the API can serve pre-computed values quickly\n\n**Acceptance Criteria:**\n- Job writes to `high_value_practices` table\n- Completes within nightly maintenance window",
+    "labels": ["Epic: High-Value Practice Finder", "backend", "etl"]
+  },
+  {
+    "title": "Part D Trends Endpoint",
+    "body": "**As** a data analyst\n**I want** `GET /v1/partDTrends?drugCode=&dateFrom=&dateTo=&region=`\n**So that** I can chart Part D spend & claims over time by payer/plan\n\n**Acceptance Criteria:**\n- Returns array of `{ month, plan, payer, totalSpend, claimCount, avgCost }`\n- Supports filtering by date range and region",
+    "labels": ["Epic: Part D Payer & Plan-Level Trends", "backend", "api"]
+  },
+  {
+    "title": "Trends Aggregation Pipeline",
+    "body": "**As** a backend engineer\n**I want** a scheduled ETL that aggregates monthly Part D metrics into `part_d_trends`\n**So that** the endpoint can return queried data in <200ms\n\n**Acceptance Criteria:**\n- ETL runs monthly, writing to `part_d_trends` table\n- Logs success/failure and alerts on errors",
+    "labels": ["Epic: Part D Payer & Plan-Level Trends", "backend", "etl"]
+  },
+  {
+    "title": "Referral Graph Endpoint",
+    "body": "**As** a developer\n**I want** `GET /v1/referralGraph?npi=&depth=&minSharedPatients=`\n**So that** I can render a network graph of provider referrals\n\n**Acceptance Criteria:**\n- Returns `{ nodes: […], edges: […] }` with correct weights\n- Limits depth to prevent combinatorial explosion",
+    "labels": ["Epic: Referral Network Graph", "backend", "api"]
+  },
+  {
+    "title": "DocGraph Materialization",
+    "body": "**As** a data engineer\n**I want** to materialize the DocGraph PUF into a `docgraph_edges` table\n**So that** the API can query edges efficiently\n\n**Acceptance Criteria:**\n- Table is kept in sync via daily refresh\n- Indexed on `(from_npi,to_npi)`",
+    "labels": ["Epic: Referral Network Graph", "backend", "etl"]
+  },
+  {
+    "title": "Adherence Endpoint",
+    "body": "**As** a care coordinator\n**I want** `GET /v1/adherence?npi=&drugCode=&period=`\n**So that** I can retrieve PDC, refill gaps, and non-adherent percentages\n\n**Acceptance Criteria:**\n- Returns `{ provider, drugCode, pdc, avgRefillGapDays, nonAdherentPct }`\n- Validates `period` format and returns `400` on error",
+    "labels": ["Epic: Patient Adherence & Refill Metrics", "backend", "api"]
+  },
+  {
+    "title": "Adherence Metrics ETL",
+    "body": "**As** a data engineer\n**I want** a windowed calculation job that computes adherence metrics for `adherence_metrics`\n**So that** our API returns pre-computed stats\n\n**Acceptance Criteria:**\n- Job processes rolling windows (e.g., last 6 months)\n- Stores results with `calculated_at` timestamps",
+    "labels": ["Epic: Patient Adherence & Refill Metrics", "backend", "etl"]
+  },
+  {
+    "title": "Cohort Segmentation Endpoint",
+    "body": "**As** a data scientist\n**I want** `POST /v1/cohortSegments` with features & segmentCount\n**So that** I can receive algorithmically derived patient segments\n\n**Acceptance Criteria:**\n- Returns array of `{ segmentId, criteria, size }`\n- Leverages simple k-means or decision trees",
+    "labels": ["Epic: Cohort Segmentation Service", "backend", "api"]
+  },
+  {
+    "title": "Segmentation Compute Job",
+    "body": "**As** a data engineer\n**I want** to run the clustering algorithm on demand or schedule\n**So that** segments can be generated for new diagnosis codes\n\n**Acceptance Criteria:**\n- Job writes to `cohort_segments` table\n- Accepts arbitrary feature sets",
+    "labels": ["Epic: Cohort Segmentation Service", "backend", "etl"]
+  },
+  {
+    "title": "Cost-of-Care Endpoint",
+    "body": "**As** a patient support app developer\n**I want** `GET /v1/costOfCare?drugCode=&region=`\n**So that** I can show total vs. patient OOP costs\n\n**Acceptance Criteria:**\n- Returns `{ region, totalCost, avgPatientOOP, patientSharePct }`\n- Validates region format (ZIP or state code)",
+    "labels": ["Epic: Cost-of-Care & Out-of-Pocket Tracker", "backend", "api"]
+  },
+  {
+    "title": "Cost Aggregation Job",
+    "body": "**As** a data engineer\n**I want** to aggregate cost data into `cost_of_care` daily/monthly\n**So that** the API can return fresh numbers\n\n**Acceptance Criteria:**\n- Job logs run times and errors\n- Updates `updated_at` field",
+    "labels": ["Epic: Cost-of-Care & Out-of-Pocket Tracker", "backend", "etl"]
+  },
+  {
+    "title": "OpenAPI Spec Extensions for Stretch APIs",
+    "body": "**As** a developer\n**I want** the stretch endpoints added to Swagger UI\n**So that** I can explore and test them interactively",
+    "labels": ["Epic: Documentation & Examples for Stretch APIs", "documentation"]
+  },
+  {
+    "title": "SDK Snippets for Stretch APIs",
+    "body": "**As** a third-party dev\n**I want** code examples for each stretch endpoint\n**So that** I can onboard quickly",
+    "labels": ["Epic: Documentation & Examples for Stretch APIs", "documentation"]
+  },
+  {
+    "title": "Postman Collection for Stretch APIs",
+    "body": "**As** a QA engineer\n**I want** these new endpoints in our Postman collection\n**So that** I can automate exploratory testing",
+    "labels": ["Epic: Documentation & Examples for Stretch APIs", "testing", "documentation"]
+  }
+]
+
