@@ -175,3 +175,112 @@ patient_journeys (1)
 ```
 
 ---
+
+## 📦 6. Add-On Tables for Stretch-Goal APIs
+
+### 6.1 high\_value\_practices
+
+Pre-computed “gap” analysis for each practice/cohort.
+
+| Column           | Type           | Constraints                       | Description                                       |
+| ---------------- | -------------- | --------------------------------- | ------------------------------------------------- |
+| `npi`            | `VARCHAR(10)`  | **PK**, FK → `surgeons(npi)`      | Provider NPI                                      |
+| `hco_id`         | `VARCHAR(20)`  |                                   | Health Care Org ID                                |
+| `practice_name`  | `TEXT`         | NOT NULL                          | Practice or group name                            |
+| `diagnosis_code` | `VARCHAR(10)`  | NOT NULL, FK → `patient_journeys` | ICD-10 code                                       |
+| `cohort_size`    | `INTEGER`      | NOT NULL                          | Number of patients in cohort                      |
+| `treated_count`  | `INTEGER`      | NOT NULL                          | Number of those patients treated by this practice |
+| `gap_percentage` | `DECIMAL(5,2)` | NOT NULL                          | 100 × (1 – treated\_count/cohort\_size)           |
+| `last_updated`   | `TIMESTAMP`    | NOT NULL DEFAULT `NOW()`          | When gap was last recalculated                    |
+
+> **Index:** `(diagnosis_code, gap_percentage DESC)` to fetch top practices efficiently.
+
+---
+
+### 6.2 part\_d\_trends
+
+Monthly spend & claim metrics by payer/plan for Part D.
+
+| Column        | Type            | Constraints                       | Description                   |
+| ------------- | --------------- | --------------------------------- | ----------------------------- |
+| `month`       | `DATE`          | **PK**                            | First day of the month        |
+| `plan_id`     | `VARCHAR(20)`   | **PK**                            | Plan identifier               |
+| `payer_name`  | `TEXT`          | NOT NULL                          | Payer (e.g. UnitedHealthcare) |
+| `drug_code`   | `VARCHAR(15)`   | **PK**, FK → drug reference table | NDC or HCPCS code             |
+| `total_spend` | `DECIMAL(12,2)` | NOT NULL                          | Gross Medicare Part D spend   |
+| `claim_count` | `INTEGER`       | NOT NULL                          | Number of claims              |
+| `avg_cost`    | `DECIMAL(7,2)`  | NOT NULL                          | total\_spend / claim\_count   |
+| `updated_at`  | `TIMESTAMP`     | NOT NULL DEFAULT `NOW()`          | Last refresh                  |
+
+> **Index:** `(drug_code, month)` for fast time-series queries.
+
+---
+
+### 6.3 docgraph\_edges
+
+(If not already modeled) Materialize DocGraph PUF for referrals.
+
+| Column            | Type          | Constraints                  | Description                          |
+| ----------------- | ------------- | ---------------------------- | ------------------------------------ |
+| `from_npi`        | `VARCHAR(10)` | **PK**, FK → `surgeons(npi)` | Referring provider                   |
+| `to_npi`          | `VARCHAR(10)` | **PK**, FK → `surgeons(npi)` | Receiving provider                   |
+| `shared_patients` | `INTEGER`     | NOT NULL                     | Count of shared patients             |
+| `last_updated`    | `TIMESTAMP`   | NOT NULL DEFAULT `NOW()`     | When this edge was last recalculated |
+
+> **Index:** Composite PK on `(from_npi,to_npi)`.
+
+---
+
+### 6.4 adherence\_metrics
+
+Patient adherence & refill stats per provider/drug.
+
+| Column             | Type           | Constraints                            | Description                         |
+| ------------------ | -------------- | -------------------------------------- | ----------------------------------- |
+| `npi`              | `VARCHAR(10)`  | **PK** composite, FK → `surgeons(npi)` | Provider NPI                        |
+| `drug_code`        | `VARCHAR(15)`  | **PK** composite                       | NDC or HCPCS code                   |
+| `period_start`     | `DATE`         | **PK** composite                       | Start of measurement window         |
+| `period_end`       | `DATE`         | **PK** composite                       | End of measurement window           |
+| `pdc`              | `DECIMAL(4,2)` | NOT NULL                               | Proportion of Days Covered          |
+| `avg_refill_gap`   | `DECIMAL(5,2)` | NOT NULL                               | Average refill gap in days          |
+| `non_adherent_pct` | `DECIMAL(5,2)` | NOT NULL                               | Percentage of patients non-adherent |
+| `calculated_at`    | `TIMESTAMP`    | NOT NULL DEFAULT `NOW()`               | When metrics were last computed     |
+
+> **Index:** `(npi, drug_code, period_start)`.
+
+---
+
+### 6.5 cohort\_segments
+
+Stored segment definitions for each disease cohort.
+
+| Column           | Type          | Constraints                       | Description                                               |
+| ---------------- | ------------- | --------------------------------- | --------------------------------------------------------- |
+| `segment_id`     | `SERIAL`      | **PK**                            | Auto-increment segment identifier                         |
+| `diagnosis_code` | `VARCHAR(10)` | NOT NULL, FK → `patient_journeys` | ICD-10 code                                               |
+| `criteria`       | `JSONB`       | NOT NULL                          | E.g. `{ "ageGroup": "65–74", "comorbidityCount": ">=2" }` |
+| `segment_size`   | `INTEGER`     | NOT NULL                          | Number of patients in this segment                        |
+| `created_at`     | `TIMESTAMP`   | NOT NULL DEFAULT `NOW()`          | When segment was generated                                |
+
+> **Index:** `(diagnosis_code, segment_id)`.
+
+---
+
+### 6.6 cost\_of\_care
+
+Aggregated total vs. patient out-of-pocket costs by region/drug.
+
+| Column              | Type            | Constraints              | Description                             |
+| ------------------- | --------------- | ------------------------ | --------------------------------------- |
+| `region`            | `VARCHAR(10)`   | **PK**                   | ZIP prefix or state code                |
+| `drug_code`         | `VARCHAR(15)`   | **PK**                   | NDC or HCPCS code                       |
+| `total_cost`        | `DECIMAL(12,2)` | NOT NULL                 | Total Medicare payout                   |
+| `avg_patient_oop`   | `DECIMAL(7,2)`  | NOT NULL                 | Average patient out-of-pocket per claim |
+| `patient_share_pct` | `DECIMAL(5,2)`  | NOT NULL                 | 100 × patient share / total\_cost       |
+| `updated_at`        | `TIMESTAMP`     | NOT NULL DEFAULT `NOW()` | When metrics were last updated          |
+
+> **Index:** `(region, drug_code)` for lookup.
+
+---
+
+These **add-on tables** will seamlessly slot into your existing schema—providing the necessary back-end support for the Stretch-Goal APIs, and empowering developers to build richer, commercial healthcare applications on CareSet’s census-level Medicare data.
