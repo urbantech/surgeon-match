@@ -1,0 +1,97 @@
+[
+  {
+    "title": "API Key Validation",
+    "body": "**As** an external developer\n**I want** to include my API key in each request header\n**So that** the gateway can authenticate and authorize my calls\n\n**Acceptance Criteria:**\n- Requests missing or invalid keys return `401 Unauthorized`\n- Valid keys pass through to service",
+    "labels": ["Epic: Authentication & API Gateway", "backend", "authentication"]
+  },
+  {
+    "title": "Rate Limiting",
+    "body": "**As** an API consumer\n**I want** my requests limited to 100/min\n**So that** the service remains performant and available for all users\n\n**Acceptance Criteria:**\n- Excess requests return `429 Too Many Requests` with a `Retry-After` header",
+    "labels": ["Epic: Authentication & API Gateway", "backend", "rate-limiting"]
+  },
+  {
+    "title": "Basic Surgeon Directory Endpoint",
+    "body": "**As** a mobile app developer\n**I want** `GET /v1/surgeons`\n**So that** I can retrieve a list of surgeons\n\n**Acceptance Criteria:**\n- Returns JSON array of surgeon objects\n- Each object matches schema (`npi`, `name`, `specialty_code`, `latitude`, `longitude`, `claim_volume_6mo`, `quality_score`)",
+    "labels": ["Epic: Surgeon Directory API", "backend", "api"]
+  },
+  {
+    "title": "Geospatial Filtering in Surgeon Directory",
+    "body": "**As** a care coordinator\n**I want** to filter by `lat`, `lng`, `radiusMiles`\n**So that** I only see surgeons within my area\n\n**Acceptance Criteria:**\n- Surgeons beyond the radius are excluded\n- radius = 0 returns only surgeons exactly at that point",
+    "labels": ["Epic: Surgeon Directory API", "backend", "api", "geospatial"]
+  },
+  {
+    "title": "Specialty & Volume Filters",
+    "body": "**As** a pharma marketer\n**I want** to filter by `specialtyCode` and `minClaimVolume`\n**So that** I target high-volume specialists\n\n**Acceptance Criteria:**\n- Only surgeons matching both filters appear\n- Invalid codes or negative volumes return `400 Bad Request`",
+    "labels": ["Epic: Surgeon Directory API", "backend", "api", "filters"]
+  },
+  {
+    "title": "Medicare Acceptance Flag Filter",
+    "body": "**As** a patient advocate\n**I want** to filter by `acceptsMedicare=true`\n**So that** I only see providers who accept my coverage\n\n**Acceptance Criteria:**\n- Passing `acceptsMedicare=false` returns non-accepting providers",
+    "labels": ["Epic: Surgeon Directory API", "backend", "api", "filters"]
+  },
+  {
+    "title": "Patient Journey Summary Endpoint",
+    "body": "**As** a front-end engineer\n**I want** `GET /v1/patientJourneys?diagnosisCode=XXX&cohortSize=Y`\n**So that** I can visualize typical care pathways\n\n**Acceptance Criteria:**\n- Returns `diagnosis_code`, `cohort_size`, `avg_time_to_surgery`, `therapy_sequence`\n- Invalid ICD-10 codes produce `404 Not Found`",
+    "labels": ["Epic: Patient Journey API", "backend", "api"]
+  },
+  {
+    "title": "Cohort Size Validation",
+    "body": "**As** a user\n**I want** `cohortSize` between 100 and 1,000,000\n**So that** the system remains performant\n\n**Acceptance Criteria:**\n- Out-of-range values return `400 Bad Request` with a message",
+    "labels": ["Epic: Patient Journey API", "backend", "validation"]
+  },
+  {
+    "title": "Surgeon Availability Inquiry Endpoint",
+    "body": "**As** an emergency coordinator\n**I want** `POST /v1/availabilityInquiry`\n**So that** I can check multiple NPIs for availability on `requestedDate`\n\n**Acceptance Criteria:**\n- Accepts JSON with `npiList` and `requestedDate`\n- Returns array of `{ npi, available, notes }`",
+    "labels": ["Epic: Surgeon Availability Inquiry API", "backend", "api"]
+  },
+  {
+    "title": "Cache Lookup & Fallback for Availability",
+    "body": "**As** an API maintainer\n**I want** availability results cached for 1 hr\n**So that** repeated queries are fast and do not overload external services\n\n**Acceptance Criteria:**\n- Cache hit returns cached response\n- Cache miss calls external service, stores result, returns data",
+    "labels": ["Epic: Surgeon Availability Inquiry API", "backend", "cache"]
+  },
+  {
+    "title": "Surgeon Quality Metrics Endpoint",
+    "body": "**As** a data scientist\n**I want** `GET /v1/surgeonQuality/{npi}`\n**So that** I can retrieve quality metrics for that surgeon\n\n**Acceptance Criteria:**\n- Returns `{ npi, procedure_code, readmission_rate_30d, complication_rate, avg_length_of_stay }`\n- Invalid `npi` yields `404 Not Found`",
+    "labels": ["Epic: Surgeon Outcomes & Quality API", "backend", "api"]
+  },
+  {
+    "title": "Procedure Code Filtering for Quality Metrics",
+    "body": "**As** a clinical analyst\n**I want** to filter by `procedureCode` query param\n**So that** I can get metrics for a specific surgery type\n\n**Acceptance Criteria:**\n- Returns only matching records\n- Multiple codes → multiple array entries",
+    "labels": ["Epic: Surgeon Outcomes & Quality API", "backend", "filters"]
+  },
+  {
+    "title": "Generate OpenAPI Spec & Swagger UI",
+    "body": "**As** a developer\n**I want** interactive API docs\n**So that** I can explore and test endpoints directly\n\n**Acceptance Criteria:**\n- All endpoints documented with models and examples",
+    "labels": ["Epic: Documentation, SDKs & Examples", "documentation", "backend"]
+  },
+  {
+    "title": "Provide Python & JavaScript SDK Snippets",
+    "body": "**As** a third-party dev\n**I want** ready-to-use Python & JS examples\n**So that** I can integrate quickly\n\n**Acceptance Criteria:**\n- Snippets cover auth, each endpoint, error handling",
+    "labels": ["Epic: Documentation, SDKs & Examples", "documentation"]
+  },
+  {
+    "title": "Create Postman Collection",
+    "body": "**As** a QA engineer\n**I want** a Postman collection\n**So that** I can automate exploratory testing\n\n**Acceptance Criteria:**\n- Contains all endpoints with environment variables",
+    "labels": ["Epic: Documentation, SDKs & Examples", "testing", "documentation"]
+  },
+  {
+    "title": "Unit Tests for Each Endpoint",
+    "body": "**As** a developer\n**I want** pytest/Jest tests for edge cases & happy-paths\n**So that** regressions are caught early",
+    "labels": ["Epic: Testing & QA", "backend", "testing"]
+  },
+  {
+    "title": "Integration Tests in Staging",
+    "body": "**As** a QA lead\n**I want** automated smoke tests against staging\n**So that** I can verify end-to-end functionality",
+    "labels": ["Epic: Testing & QA", "testing"]
+  },
+  {
+    "title": "CI/CD Pipeline Setup",
+    "body": "**As** DevOps\n**I want** pushes to `develop` auto-deploy to staging and to `main` auto-deploy to prod\n**So that** releases are consistent and automated",
+    "labels": ["Epic: Deployment & Monitoring", "devops"]
+  },
+  {
+    "title": "Monitoring & Alerts Configuration",
+    "body": "**As** an SRE\n**I want** Datadog dashboards for latency & error rates plus PagerDuty alerts\n**So that** we get notified on anomalies",
+    "labels": ["Epic: Deployment & Monitoring", "monitoring"]
+  }
+]
