@@ -8,16 +8,18 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8888:8888"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/surgeonmatch
       - REDIS_URL=redis://redis:6379/0
       - DEBUG=true
       - API_KEY_HEADER=X-API-Key
-      - API_PREFIX=/api/v1
-      - SECRET_KEY=your-super-secret-key-change-in-production
-      - RATE_LIMIT=100
+      - API_PREFIX=/v1
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - RATE_LIMIT=5
       - RATE_LIMIT_PERIOD=60
+      - TEST_API_KEY=test-api-key-for-rate-limit-testing
+    command: uvicorn surgeonmatch.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - db
       - redis
