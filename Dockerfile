@@ -27,6 +27,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     gcc \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy wheels from builder stage
@@ -39,5 +40,11 @@ COPY . .
 # Expose port for FastAPI
 EXPOSE 8000
 
-# Start command
-CMD ["uvicorn", "surgeonmatch.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Create entrypoint script with database migrations
+RUN echo '#!/bin/sh\n\
+python -m alembic upgrade head\n\
+python -m uvicorn surgeonmatch.main:app --host 0.0.0.0 --port 8000\n\
+' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# Run the application
+CMD ["/app/entrypoint.sh"]

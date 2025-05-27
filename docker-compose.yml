@@ -1,44 +1,69 @@
 version: '3.8'
 
 services:
+  # FastAPI application
   api:
     build: .
-    ports:
-      - "8001:8000"
+    container_name: surgeonmatch-api
     volumes:
       - .:/app
-    depends_on:
-      - db
-      - redis
+    ports:
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/surgeonmatch
       - REDIS_URL=redis://redis:6379/0
-      - API_PREFIX=/v1
+      - DEBUG=true
       - API_KEY_HEADER=X-API-Key
+      - API_PREFIX=/v1
+      - SECRET_KEY=dev_secret_key_change_in_production
       - RATE_LIMIT=5
       - RATE_LIMIT_PERIOD=60
       - TEST_API_KEY=test-api-key-for-rate-limit-testing
-      - DEBUG=true
-      - SECRET_KEY=dev_secret_key_change_in_production
     command: uvicorn surgeonmatch.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - db
+      - redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
+  # PostgreSQL database
   db:
-    image: postgres:15
+    image: postgres:14-alpine
+    container_name: surgeonmatch-db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=surgeonmatch
     ports:
-      - "5433:5432"
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=surgeonmatch
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis for caching and rate limiting
   redis:
-    image: redis:7
+    image: redis:7-alpine
+    container_name: surgeonmatch-redis
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
-    ports:
-      - "6380:6379"
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

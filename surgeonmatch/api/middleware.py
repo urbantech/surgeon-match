@@ -227,8 +227,35 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 def add_middleware(app: ASGIApp):
     """Add all middleware to the FastAPI application."""
     # Note: The order matters - middlewares are called in reverse order of addition
+    
+    # Cache middleware should be first in the chain (last to be added)
+    # so it can cache the final response after all other processing
+    from surgeonmatch.core.cache import RedisCache
+    from surgeonmatch.core.database import get_redis
+    from surgeonmatch.api.middleware.cache import CacheMiddleware
+    
+    # Get Redis connection from the pool
+    redis = get_redis()
+    redis_cache = RedisCache(redis)
+    
+    # Add middlewares in reverse order of execution
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(APIKeyMiddleware)
+    app.add_middleware(
+        CacheMiddleware,
+        redis_cache=redis_cache,
+        cacheable_paths={
+            "/api/v1/surgeons", 
+            "/api/v1/claims", 
+            "/api/v1/quality-metrics"
+        },
+        exclude_paths={
+            "/api/v1/api-keys", 
+            "/health", 
+            "/metrics"
+        },
+        ttl=3600  # 1 hour default cache TTL
+    )
     
     return app

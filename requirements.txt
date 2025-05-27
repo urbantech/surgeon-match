@@ -1,18 +1,42 @@
+# FastAPI framework and server
 fastapi==0.115.2
 uvicorn==0.27.0
+starlette==0.34.0
+
+# Database and ORM
 sqlalchemy==2.0.27
 asyncpg==0.29.0
+alembic==1.13.1
+greenlet==3.0.3
+
+# Authentication and security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
+
+# Environment and configuration
 python-dotenv==1.0.0
-redis==5.0.1
 pydantic==2.6.3
 pydantic-settings==2.1.0
-alembic==1.13.1
+email-validator==2.1.0
+
+# Caching and performance
+redis==5.0.1
+orjson==3.9.15  # Faster JSON serialization/deserialization
+ujson==5.9.0    # Alternative fast JSON library
+aiocache==0.12.2  # Async caching
+aioredis==2.0.1   # Async Redis client
+
+# Testing
 pytest==7.4.4
 httpx==0.26.0
 pytest-asyncio==0.23.5
-email-validator==2.1.0
+# Already included earlier in the file: email-validator==2.1.0
 greenlet==3.0.3
 psycopg2-binary==2.9.9
+pytest-cov==4.1.0  # Coverage reporting
+
+# Monitoring and metrics
+prometheus-client==0.19.0  # Metrics collection
+opentelemetry-api==1.22.0  # Telemetry
+opentelemetry-sdk==1.22.0  # Telemetry
