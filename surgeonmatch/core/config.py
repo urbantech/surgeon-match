@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     API_KEY: str
     API_KEY_HEADER: str = "X-API-Key"
+    TEST_API_KEY: Optional[str] = None
     
     # Database
     DATABASE_URL: str

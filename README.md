@@ -47,6 +47,59 @@
 
 ---
 
+## 🔐 Authentication & Rate Limiting
+
+### API Key Authentication
+
+All requests to the SurgeonMatch API require an API key for authentication:
+
+```bash
+# Include in header
+curl -H "X-API-Key: your_api_key_here" https://api.surgeonmatch.com/v1/surgeons
+```
+
+To obtain an API key, please contact the SurgeonMatch team.
+
+### Rate Limiting
+
+The API enforces rate limiting to ensure fair usage and system stability:
+
+- **Limit**: 100 requests per minute per API key
+- **Tracking**: Limits are applied per API key and per endpoint
+- **Reset**: Rate limits reset every 60 seconds
+
+#### Rate Limit Headers
+
+Every API response includes rate limit information in the headers:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 58
+X-RateLimit-Window: 60
+```
+
+#### Rate Limit Exceeded
+
+If you exceed the rate limit, you'll receive a `429 Too Many Requests` response with:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit exceeded. Please try again later.",
+    "retry_after": 45,
+    "retry_date": "Mon, 26 May 2025 14:55:32 GMT",
+    "limit": 100,
+    "window": "60 seconds"
+  }
+}
+```
+
+The response also includes a `Retry-After` header indicating the number of seconds until the rate limit resets.
+
+---
+
 ## 📚 Core Endpoints
 
 ### 1. Surgeon Directory

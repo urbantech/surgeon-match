@@ -1,5 +1,6 @@
 import time
 import logging
+from datetime import datetime, timedelta
 from typing import Dict, Any, AsyncGenerator
 
 from fastapi import Request, status, HTTPException
@@ -32,7 +33,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         call_next: RequestResponseEndpoint
     ):
         # Skip API key check for docs, openapi.json, and health endpoint
-        if request.url.path in ["/docs", "/openapi.json", "/redoc", "/", "/health"]:
+        if request.url.path in ["/docs", "/openapi.json", "/redoc", "/", "/health", "/v1/health"]:
             return await call_next(request)
             
         # Get API key from header
@@ -110,7 +111,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         call_next: RequestResponseEndpoint
     ):
         # Skip rate limiting for docs, openapi.json, and health endpoint
-        if request.url.path in ["/docs", "/openapi.json", "/redoc", "/", "/health"]:
+        if request.url.path in ["/docs", "/openapi.json", "/redoc", "/", "/health", "/v1/health"]:
             return await call_next(request)
             
         # Get API key from request state (set by APIKeyMiddleware)
@@ -138,33 +139,47 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             session = await anext(db)
             
             # Check rate limit
-            is_allowed, remaining, reset_in = await check_rate_limit(
-                api_key_id=api_key_id,
-                endpoint=endpoint,
-                db=session
+            is_rate_limited, limit, remaining, reset_in = await check_rate_limit(
+                api_key_id,
+                endpoint,
+                session,
+                request=request
             )
+            
+            # Invert is_rate_limited to get is_allowed
+            is_allowed = not is_rate_limited
             
             # Add rate limit headers to response
             response = await call_next(request)
-            response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT)
+            response.headers["X-RateLimit-Limit"] = str(limit)
             response.headers["X-RateLimit-Remaining"] = str(remaining)
             response.headers["X-RateLimit-Reset"] = str(reset_in)
             
             if not is_allowed:
+                # Format the retry timestamp both as seconds (integer) and as HTTP date
+                # for maximum client compatibility
+                retry_date = datetime.utcnow() + timedelta(seconds=reset_in)
+                retry_date_http = retry_date.strftime('%a, %d %b %Y %H:%M:%S GMT')
+                
                 return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={
                         "error": {
                             "code": ErrorCodes.RATE_LIMIT_EXCEEDED[0],
                             "message": "Rate limit exceeded. Please try again later.",
-                            "retry_after": reset_in
+                            "retry_after": reset_in,
+                            "retry_date": retry_date_http,
+                            "limit": limit,
+                            "window": f"{reset_in} seconds"
                         }
                     },
                     headers={
-                        "Retry-After": str(reset_in),
-                        "X-RateLimit-Limit": str(settings.RATE_LIMIT),
+                        "Retry-After": str(reset_in),  # Seconds format
+                        "X-RateLimit-Limit": str(limit),
                         "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": str(reset_in)
+                        "X-RateLimit-Reset": str(reset_in),
+                        "X-RateLimit-Window": str(reset_in),
+                        "Access-Control-Expose-Headers": "Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-RateLimit-Window"
                     }
                 )
                 

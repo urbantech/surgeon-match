@@ -15,6 +15,7 @@ from .api.endpoints.api_keys import router as api_keys_router
 from .api.endpoints.surgeons import router as surgeons_router
 from .api.endpoints.claims import router as claims_router
 from .api.endpoints.quality_metrics import router as quality_metrics_router
+from .api.endpoints.test import router as test_router
 from .schemas.error import ErrorCodes
 
 # Configure logging
@@ -95,6 +96,13 @@ app.include_router(
     quality_metrics_router,
     prefix=f"{settings.API_PREFIX}/quality-metrics",
     tags=["Quality Metrics"],
+    responses=common_responses,
+)
+
+app.include_router(
+    test_router,
+    prefix=f"{settings.API_PREFIX}",
+    tags=["Test"],
     responses=common_responses,
 )
 
